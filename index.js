@@ -1,55 +1,54 @@
 const postcss = require("postcss");
 
-module.exports = postcss.plugin('dash-dash', () => {
-    return (css, result) => {
-        let prevRule = null;
-        css.walkRules(rule => {
-            const rulesWithDashDash = rule.selectors.filter(
-                selector => /^(.+ )?--[a-z]\w*(-[a-z0-9]+)*--$/.test(selector)
-            );
+const replaceShorthandSelectors = (css, result) => {
+    let prevRule = null;
+    css.walkRules(rule => {
+        const rulesWithDashDash = rule.selectors.filter(
+            selector => /^(.+ )?--[a-z]\w*(-[a-z0-9]+)*--$/.test(selector)
+        );
 
-            if (rulesWithDashDash.length === 0) {
-                prevRule = rule;
-                return;
-            }
+        // Nothing to do here, go to next rule.
+        if (rulesWithDashDash.length === 0) {
+            prevRule = rule;
+            return;
+        }
 
-            if (rule.selectors.length > 1 && rule.selectors.length > rulesWithDashDash) {
-                throw new Error('Something went wrong, -- should be on all the selectors' . rule.selectors.join());
-            }
+        // If somehow there is a shorthand on some but not all of the selectors, we cannot do the substitution.
+        // Not sure if that's possible but we definitely want the build to fail in that case.
+        if (rule.selectors.length > 1 && rule.selectors.length > rulesWithDashDash) {
+            throw new Error('Something went wrong, -- should be on all the selectors ' . rule.selectors.join());
+        }
 
-            const parts = rule.selectors[0].split(' ');
-            parts.reverse();
-            const prefix = parts[0];
+        const parts = rule.selectors[0].split(' ');
+        parts.reverse();
+        const prefix = parts[0];
+        const newDecls = [];
 
-            console.log(prefix);
-
-            const newDecls = [];
-            rule.walkDecls(decl=> {
-                const newDecl = postcss.decl({
-                    prop: decl.prop,
-                    value: `var(${prefix}${decl.prop}, ${decl.value})`,
-                });
-                newDecls.push(newDecl);
-                decl.remove();
+        rule.walkDecls(decl=> {
+            const newDecl = postcss.decl({
+                prop: decl.prop,
+                value: `var(${prefix}${decl.prop}, ${decl.value})`,
             });
+            newDecls.push(newDecl);
+            decl.remove();
+        });
 
-            const expectedTargetSelectors = rule.selectors.map(selector=> selector.replace(` ${ prefix }`, ''))
-            const expectedTargetSelector = expectedTargetSelectors.join();
+        const expectedTargetSelectors = rule.selectors.map(selector=> selector.replace(` ${ prefix }`, ''))
+        const expectedTargetSelector = expectedTargetSelectors.join();
 
-            if (prevRule && prevRule.parent === rule.parent && prevRule.selectors.join() === expectedTargetSelector) {
-                console.log('FOUND EXISTING: ', prevRule.selectors.join());
-                prevRule.append(newDecls);
-            } else {
-                console.log('CREATING NEW', !prevRule ? 'prev rule is null' : expectedTargetSelector);
-                const newRule = postcss.rule({
-                    selectors: expectedTargetSelectors,
-                    source: rule.source,
-                });
-                newRule.append(...newDecls);
-                rule.after(newRule);
-                rule.remove();
-                prevRule = newRule;
-            }
-        })
-    }
-})
+        if (prevRule && prevRule.parent === rule.parent && prevRule.selectors.join() === expectedTargetSelector) {
+            prevRule.append(newDecls);
+        } else {
+            const newRule = postcss.rule({
+                selectors: expectedTargetSelectors,
+                source: rule.source,
+            });
+            newRule.append(...newDecls);
+            rule.after(newRule);
+            rule.remove();
+            prevRule = newRule;
+        }
+    })
+};
+
+module.exports = postcss.plugin('dash-dash', () => replaceShorthandSelectors)
