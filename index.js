@@ -25,9 +25,10 @@ const replaceShorthandSelectors = (css, result) => {
         const newDecls = [];
 
         rule.walkDecls(decl=> {
+            const varName = `${prefix}${decl.prop}`;
             const newDecl = postcss.decl({
                 prop: decl.prop,
-                value: `var(${prefix}${decl.prop}, ${decl.value})`,
+                value: `var(${varName}, ${decl.value})`,
             });
             newDecls.push(newDecl);
             decl.remove();
