@@ -4,7 +4,7 @@ const replaceShorthandSelectors = (css, result) => {
     let prevRule = null;
     css.walkRules(rule => {
         const rulesWithDashDash = rule.selectors.filter(
-            selector => /^(.+ )?--[a-z]\w*(-[a-z0-9]+)*--$/.test(selector)
+            selector => /^(.+ )?--[a-z]\w*(--?[a-z0-9]+)*--$/.test(selector)
         );
 
         // Nothing to do here, go to next rule.
