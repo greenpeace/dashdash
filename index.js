@@ -4,7 +4,7 @@ const replaceShorthandSelectors = (css, result) => {
     let prevRule = null;
     css.walkRules(rule => {
         const rulesWithDashDash = rule.selectors.filter(
-            selector => /^(.+ )?--[a-z]\w*(--?[a-z0-9]+)*--$/.test(selector)
+            selector => /^(.+ )?--[a-z]\w*(--?[a-z0-9]+)*--(:(hover|focus|active|disabled|visited))?$/.test(selector)
         );
 
         // Nothing to do here, go to next rule.
@@ -21,7 +21,11 @@ const replaceShorthandSelectors = (css, result) => {
 
         const parts = rule.selectors[0].split(' ');
         parts.reverse();
-        const prefix = parts[0];
+        const lastPart = parts[0];
+
+        const prefix = `${lastPart.replace(/:/, '').replace(/--$/, '')}--`;
+        const withoutState = lastPart.replace(/:(hover|focus|active|disabled|visited)/, '');
+
         const newDecls = [];
 
         rule.walkDecls(decl=> {
@@ -34,7 +38,7 @@ const replaceShorthandSelectors = (css, result) => {
             decl.remove();
         });
 
-        const expectedTargetSelectors = rule.selectors.map(selector=> selector.replace(` ${ prefix }`, ''))
+        const expectedTargetSelectors = rule.selectors.map(selector => selector.replace(` ${withoutState}`, ''));
         const expectedTargetSelector = expectedTargetSelectors.join();
 
         if (prevRule && prevRule.parent === rule.parent && prevRule.selectors.join() === expectedTargetSelector) {
