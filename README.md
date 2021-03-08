@@ -36,13 +36,18 @@ combined selectors. It strips the prefix from the selector, which gives it the "
 to.
 
 You can also include any element state pseudo selectors, and they will behave the same way as they would when used 
-directly in the selector. In that case the state is included in the generated name.
+directly in the selector. In that case the state is included in the generated name. If there is more than one state, the
+first one is used for the name (but better to give them separate variables, which will allow them to be changed at a
+later point without needing a code change).
 ```scss
 .foobar {
   --some-string-- {
     color: green;
     &:hover {
       background-color: white;
+    }
+    &:active, &:visited {
+      background-color: yellow;
     }
   }
 }
@@ -55,11 +60,14 @@ gets transformed to
 .foobar:hover {
     background-color: var(--some-string--hover--background-color: white);
 }
+.foobar:active, .foobar:visited {
+    background-color: var(--some-string--active--background-color: white);
+}
 ```
 
 If the element's selector is sufficiently descriptive, you can use the `_--` shorthand to have the prefix be generated
 from it. The name generation simply takes anything that is not alphanumeric or a dash, and turns it into maximum 2
-dashes.
+dashes. This will throw an error when used on multiple selectors.
 
 ```scss
 .foobar {
@@ -68,6 +76,12 @@ dashes.
     &:hover {
       background-color: white;
     }
+  }
+}
+
+#header .nav-item {
+  _-- {
+    color: red;
   }
 }
 ```
@@ -79,4 +93,10 @@ gets transformed to
 .foobar:hover {
     background-color: var(--foobar--hover--background-color: white);
 }
+#header .nav-item {
+    color: var(--header--nav-item--color, red);
+}
 ```
+
+Obviously this will lead to naming conflicts in some cases and is really only advisable on single class or element
+selectors.
