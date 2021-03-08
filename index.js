@@ -39,7 +39,7 @@ const replaceShorthandSelectors = (css, result) => {
         const isPrefixGenerate = '_--' === withoutPseudo;
 
         if ( isPrefixGenerate && rule.selectors.length > 1) {
-            throw new Error('Cannot generate prefix when using multiple selectors.');
+            throw new Error('Cannot generate prefix when using multiple selectors. ' . rule.selectors.join());
         }
 
         const newDecls = [];
@@ -60,16 +60,16 @@ const replaceShorthandSelectors = (css, result) => {
 
         if (prevRule && prevRule.parent === rule.parent && prevRule.selectors.join() === expectedTargetSelector) {
             prevRule.append(newDecls);
-        } else {
-            const newRule = postcss.rule({
-                selectors: expectedTargetSelectors,
-                source: rule.source,
-            });
-            newRule.append(...newDecls);
-            rule.after(newRule);
-            rule.remove();
-            prevRule = newRule;
+            return;
         }
+        const newRule = postcss.rule({
+            selectors: expectedTargetSelectors,
+            source: rule.source,
+        });
+        newRule.append(...newDecls);
+        rule.after(newRule);
+        rule.remove();
+        prevRule = newRule;
     })
 };
 
