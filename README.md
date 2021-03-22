@@ -100,3 +100,48 @@ gets transformed to
 
 Obviously this will lead to naming conflicts in some cases and is really only advisable on single class or element
 selectors.
+
+## Usage with webpack
+
+Ideally you should run this plugin as early as possible in the build, so the other plugins don't need to work with the
+shorthand form. This could cause some issues with for example duplicate detection.
+
+```ecmascript 6
+module.exports = {
+  module: {
+    // ...
+    rules: [
+      // ...
+      {
+        test: /\.(sass|scss)$/,
+        use: [
+            // ...
+          {
+            loader: 'postcss-loader',
+            options: {
+              ident: 'postcss',
+              plugins: () => [
+                dashDash(),
+                // ...other plugins
+              ],
+              sourceMap: true
+            }
+          },
+          {
+            loader: 'sass-loader',
+          }
+        ]
+      },
+    ]
+  },
+}
+```
+
+If you have stylelint set up, you probably need to allow the format with the following rule.
+```json
+{
+    "selector-type-no-unknown": [true, {
+	  "ignoreTypes": ["/^--[a-z]\\w*(--?[a-z0-9]+)*--$/", "_--"]
+	}]
+}
+```
