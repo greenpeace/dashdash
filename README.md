@@ -149,6 +149,8 @@ If you have stylelint set up, you probably need to allow the format with the fol
 ## `@media` queries
 
 If the declaration is within a media query, a prefix will be generated from the media query's conditions. This means
-queries with multiple conditions result in very long names, which might or might not be a problem. An alias map passed
-through the plugin's configuration could be helpful for this (todo). The case of nested media queries is also not
-handled yet, it will pick the innermost one only.
+queries with multiple conditions result in very long names, which might or might not be a problem. You can pass an alias
+map using `mediaQueryAliases`, where each key is the media query's conditions (e.g. `(min-width: 1200px)`), the value is
+the alias. By default, this it is added at the start of the variable name.
+
+Nested media queries are not handled yet, in that case it will only use the innermost for the name generation.

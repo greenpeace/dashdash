@@ -11,13 +11,13 @@ const generatePrefix = selector => {
 // Travel up to the first parent that is a media query, and if found generate a prefix from its params.
 // NOTE: This does not account for nested media queries for now, it will pick the innermost one only.
 // todo: Allow configuring aliases for the params.
-const generateMediaQueryPrefix = rule => {
+const generateMediaQueryPrefix = (rule, aliases) => {
     let parent = rule;
 
     do {
         parent = parent.parent;
         if (parent && parent.name === 'media') {
-            return generatePrefix(parent.params);
+            return generatePrefix(aliases[parent.params] ? aliases[parent.params] : parent.params);
         }
     } while (parent);
 
@@ -27,7 +27,7 @@ const generateMediaQueryPrefix = rule => {
 
 const DASH_DASH_REGEX = /^(.+ )?_?--(\w+(-\w+)*--)*(:(hover|focus|active|disabled|visited))?$/;
 
-const replaceShorthandSelectors = (css, result) => {
+const replaceShorthandSelectors = ({mediaQueryAtStart = true, mediaQueryAliases = {}}) => (css, result) => {
     let prevRule = null;
     css.walkRules(rule => {
         const rulesWithDashDash = rule.selectors.filter(
@@ -63,9 +63,11 @@ const replaceShorthandSelectors = (css, result) => {
 
         rule.walkDecls(decl=> {
             const rulePrefix = isPrefixGenerate ? generatePrefix(rule.selectors[0]) : prefix;
-            const mediaQueryPrefix = generateMediaQueryPrefix(rule);
+            const mediaQueryPrefix = generateMediaQueryPrefix(rule, mediaQueryAliases);
 
-            const varName = `${mediaQueryPrefix}${rulePrefix}--${decl.prop}`;
+            const elementPrefix = mediaQueryAtStart ? `${mediaQueryPrefix}${rulePrefix}` : `${rulePrefix}${mediaQueryPrefix}`;
+
+            const varName = `${elementPrefix}--${decl.prop}`;
 
             const newDecl = postcss.decl({
                 prop: decl.prop,
@@ -94,4 +96,6 @@ const replaceShorthandSelectors = (css, result) => {
     })
 };
 
-module.exports = postcss.plugin('dash-dash', () => replaceShorthandSelectors)
+module.exports = postcss.plugin('dash-dash', (opts = {}) => {
+    return replaceShorthandSelectors(opts);
+})
