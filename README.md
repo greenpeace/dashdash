@@ -94,7 +94,7 @@ gets transformed to
     background-color: var(--foobar--hover--background-color: white);
 }
 #header .nav-item {
-    color: var(--header--nav-item--color, red);
+    color: var(--header--nav-item--color: red);
 }
 ```
 
