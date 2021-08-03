@@ -10,7 +10,6 @@ const generatePrefix = selector => {
 
 // Travel up to the first parent that is a media query, and if found generate a prefix from its params.
 // NOTE: This does not account for nested media queries for now, it will pick the innermost one only.
-// todo: Allow configuring aliases for the params.
 const generateMediaQueryPrefix = (rule, aliases) => {
     let parent = rule;
 
@@ -27,8 +26,10 @@ const generateMediaQueryPrefix = (rule, aliases) => {
 
 const DASH_DASH_REGEX = /^(.+ )?_?--(\w+(-\w+)*--)*(:(hover|focus|active|disabled|visited))?$/;
 
-const replaceShorthandSelectors = ({mediaQueryAtStart = true, mediaQueryAliases = {}}) => (css, result) => {
+const replaceShorthandSelectors = (options) => (css, result) => {
+    const {mediaQueryAtStart = true, mediaQueryAliases = {}} = options;
     let prevRule = null;
+
     css.walkRules(rule => {
         const rulesWithDashDash = rule.selectors.filter(
             selector => DASH_DASH_REGEX.test(selector)
@@ -43,11 +44,10 @@ const replaceShorthandSelectors = ({mediaQueryAtStart = true, mediaQueryAliases 
         // If somehow there is a shorthand on some but not all of the selectors, we cannot do the substitution.
         // Not sure if that's possible but we definitely want the build to fail in that case.
         if (rule.selectors.length > 1 && rule.selectors.length > rulesWithDashDash) {
-            throw new Error('Something went wrong, -- should be on all the selectors ' . rule.selectors.join());
+            throw new Error('Something went wrong, -- should be on all the selectors ' + rule.selectors.join());
         }
 
-        const parts = rule.selectors[0].split(' ');
-        parts.reverse();
+        const parts = rule.selectors[0].split(' ').reverse();
         const lastPart = parts[0];
 
         const prefix = `${lastPart.replace(/[:_]/g, '').replace(/--$/, '')}`;
@@ -56,7 +56,7 @@ const replaceShorthandSelectors = ({mediaQueryAtStart = true, mediaQueryAliases 
         const isPrefixGenerate = '_--' === withoutPseudo;
 
         if ( isPrefixGenerate && rule.selectors.length > 1) {
-            throw new Error('Cannot generate prefix when using multiple selectors. ' . rule.selectors.join());
+            throw new Error('Cannot generate prefix when using multiple selectors. ' + rule.selectors.join());
         }
 
         const newDecls = [];
@@ -69,10 +69,7 @@ const replaceShorthandSelectors = ({mediaQueryAtStart = true, mediaQueryAliases 
 
             const varName = `${elementPrefix}--${decl.prop}`;
 
-            const newDecl = postcss.decl({
-                prop: decl.prop,
-                value: `var(${varName}, ${decl.value})`,
-            });
+            const newDecl = decl.clone({value: `var(${varName}, ${decl.value})`});
             newDecls.push(newDecl);
             decl.remove();
         });
@@ -83,6 +80,7 @@ const replaceShorthandSelectors = ({mediaQueryAtStart = true, mediaQueryAliases 
 
         if (prevRule && prevRule.parent === rule.parent && prevRule.selectors.join() === expectedTargetSelector) {
             prevRule.append(newDecls);
+            rule.remove();
             return;
         }
         const newRule = postcss.rule({
@@ -96,6 +94,6 @@ const replaceShorthandSelectors = ({mediaQueryAtStart = true, mediaQueryAliases 
     })
 };
 
-module.exports = postcss.plugin('dash-dash', (opts = {}) => {
-    return replaceShorthandSelectors(opts);
+module.exports = postcss.plugin('dash-dash', (options = {}) => {
+    return replaceShorthandSelectors(options);
 })
