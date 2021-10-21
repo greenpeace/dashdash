@@ -24,7 +24,7 @@ const generateMediaQueryPrefix = (rule, aliases) => {
     return '';
 }
 
-const DASH_DASH_REGEX = /^(.+ )?_?--(\w+(-\w+)*--)*(:(hover|focus|active|disabled|visited))?$/;
+const DASH_DASH_REGEX = /^(.+ )_?--(\w+(-\w+)*--)*(::?(\w+(-\w+)*))?$/;
 
 const replaceShorthandSelectors = (options) => (css, result) => {
     const {mediaQueryAtStart = true, mediaQueryAliases = {}} = options;
@@ -51,7 +51,7 @@ const replaceShorthandSelectors = (options) => (css, result) => {
         const lastPart = parts[0];
 
         const prefix = `${lastPart.replace(/[:_]/g, '').replace(/--$/, '')}`;
-        const withoutPseudo = lastPart.replace(/:(hover|focus|active|disabled|visited)/g, '');
+        const withoutPseudo = lastPart.replace(/::?(\w+(-\w+)*)/g, '');
 
         const isPrefixGenerate = '_--' === withoutPseudo;
 
