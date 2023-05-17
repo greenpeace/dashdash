@@ -55,23 +55,52 @@ const replaceShorthandSelectors = (options) => (css, result) => {
 
         const isPrefixGenerate = '_--' === withoutPseudo;
 
-        if ( isPrefixGenerate && rule.selectors.length > 1) {
-            throw new Error('Cannot generate prefix when using multiple selectors. ' + rule.selectors.join());
-        }
-
         const newDecls = [];
 
+        // Parse each selector with its own rules
+        const selectorsWithRules = rule.selectors.reduce(
+          (prevSelector, currSelector) => {
+            currSelector = `${currSelector.replace(/_--/, '').replace(/--.*--/, '').replace(/ :/g, ':')}`;
+            return {
+              ...prevSelector,
+              ...{[`${currSelector}`]: {
+                decls: [],
+              }}
+            };
+          },
+          {}
+        );
+
         rule.walkDecls(decl=> {
-            const rulePrefix = isPrefixGenerate ? generatePrefix(rule.selectors[0]) : prefix;
-            const mediaQueryPrefix = generateMediaQueryPrefix(rule, mediaQueryAliases);
+          // Iterate each selector and append its own declarations
+          Object.keys(selectorsWithRules).reduce((prevDecl, currDecl) => {
+            const tempDecls = selectorsWithRules[currDecl];
+            tempDecls['decls'] = [...tempDecls['decls'], decl];
 
-            const elementPrefix = mediaQueryAtStart ? `${mediaQueryPrefix}${rulePrefix}` : `${rulePrefix}${mediaQueryPrefix}`;
+            return {
+              ...prevDecl,
+              ...tempDecls,
+            };
+          }, {});
 
-            const varName = `${elementPrefix}--${decl.prop}`;
-
-            const newDecl = decl.clone({value: `var(${varName}, ${decl.value})`});
-            newDecls.push(newDecl);
+          // Iterate and clean up duplicated declarations
+          rule.selectors.forEach(() => {
             decl.remove();
+          });
+        });
+
+        Object.keys(selectorsWithRules).forEach((selector) => {
+          const clonedRule = rule.cloneAfter({ selector });
+          const decls = selectorsWithRules[selector].decls;
+          const rulePrefix = isPrefixGenerate ? generatePrefix(selector) : prefix;
+          const mediaQueryPrefix = generateMediaQueryPrefix(rule, mediaQueryAliases);
+          const elementPrefix = mediaQueryAtStart ? `${mediaQueryPrefix}${rulePrefix}` : `${rulePrefix}${mediaQueryPrefix}`;
+
+          decls.forEach(decl => {
+            const varName = `${elementPrefix}--${decl.prop}`;
+            const newDecl = decl.clone({value: `var(${varName}, ${decl.value})`});
+            clonedRule.append(newDecl);
+          });
         });
 
         // Preserve the pseudo class.
@@ -83,6 +112,7 @@ const replaceShorthandSelectors = (options) => (css, result) => {
             rule.remove();
             return;
         }
+
         const newRule = postcss.rule({
             selectors: expectedTargetSelectors,
             source: rule.source,
@@ -90,6 +120,7 @@ const replaceShorthandSelectors = (options) => (css, result) => {
         newRule.append(...newDecls);
         rule.after(newRule);
         rule.remove();
+        newRule.remove();
         prevRule = newRule;
     })
 };
