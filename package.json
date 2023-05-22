@@ -1,6 +1,6 @@
 {
   "name": "@greenpeace/dashdash",
-  "version": "1.2",
+  "version": "1.2.1",
   "description": "Script to run just after SCSS is compiled into CSS, to convert declarations in any selectors ending with --some-string-- into the same declarations but with a variable around the value. These declarations are added to the selector preceding the --some-string-- part, which will be created if it doesn't exist yet. You can also generate the name from the selector with `_--`.",
   "main": "index.js",
   "scripts": {
